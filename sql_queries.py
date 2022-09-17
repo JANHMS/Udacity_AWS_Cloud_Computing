@@ -6,11 +6,11 @@ config_file_path = 'dwh.cfg'
 config = configparser.ConfigParser()
 config.read_file(open(config_file_path))
 
-REGION = config.get("CLUSTER","REGION")
-ROLE_ARN = config.get("IAM_ROLE", "ARN")
 LOG_DATA = config.get("S3", "LOG_DATA")
 LOG_JSONPATH = config.get("S3", "LOG_JSONPATH")
 SONG_DATA = config.get("S3", "SONG_DATA")
+REGION = config.get("CLUSTER","REGION")
+ROLE_ARN = config.get("IAM_ROLE", "ARN")
 
 
 # DROP TABLES
@@ -25,7 +25,7 @@ time_table_drop = "DROP TABLE IF EXISTS time CASCADE"
 # CREATE TABLES
 
 staging_events_table_create= ("""
-CREATE TABLE IF NOT EXISTS staging_events (
+CREATE TABLE IF NOT EXISTS staging_events(
 artist                  VARCHAR,
 auth                    VARCHAR,
 firstName               VARCHAR,
@@ -50,7 +50,7 @@ userId                  INT
 
 
 staging_songs_table_create = ("""
-CREATE TABLE IF NOT EXISTS staging_songs (
+CREATE TABLE IF NOT EXISTS staging_songs(
 artist_id                   VARCHAR,
 artist_latitude             FLOAT,
 artist_location             VARCHAR,
@@ -65,7 +65,7 @@ year                        INT
 """)
 
 user_table_create = ("""
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS users(
 user_id                     INT PRIMARY KEY sortkey,
 first_name                  VARCHAR,
 last_name                   VARCHAR,
@@ -96,7 +96,7 @@ longitude           NUMERIC
 """)
 
 time_table_create = ("""
-CREATE TABLE IF NOT EXISTS time (
+CREATE TABLE IF NOT EXISTS time(
 start_time              timestamp PRIMARY KEY sortkey distkey,
 hour                    INTEGER,
 day                     INTEGER,
@@ -108,17 +108,16 @@ weekday                 INTEGER
 """)
 
 songplay_table_create = ("""
-CREATE TABLE IF NOT EXISTS songplay
-    (
-    songplay_id INT IDENTITY(0,1) primary key sortkey,
-    start_time timestamp distkey,
-    user_id int ,
-    level varchar,
-    song_id varchar,
-    artist_id varchar,
-    session_id int,
-    location varchar,
-    user_agent varchar,
+CREATE TABLE IF NOT EXISTS songplay(
+    songplay_id             INT IDENTITY(0,1) primary key sortkey,
+    start_time              timestamp distkey,
+    user_id                 INT ,
+    level                   VARCHAR,
+    song_id                 VARCHAR,
+    artist_id               VARCHAR,
+    session_id              INT,
+    location                VARCHAR,
+    user_agent              VARCHAR,
     CONSTRAINT fk_time
         FOREIGN KEY (start_time) REFERENCES time(start_time),
     CONSTRAINT fk_users
@@ -139,7 +138,12 @@ staging_events_copy = ("""
     FORMAT  JSON {json_path}
     TIMEFORMAT  'epochmillisecs'
     TRUNCATECOLUMNS BLANKSASNULL EMPTYASNULL;
-""").format(s3_bucket=LOG_DATA, arn=ROLE_ARN, region=REGION,json_path=LOG_JSONPATH)
+""").format(
+    s3_bucket=LOG_DATA,
+    arn=ROLE_ARN,
+    region=REGION,
+    json_path=LOG_JSONPATH
+    )
 
 staging_songs_copy = ("""
     COPY staging_songs
@@ -148,7 +152,11 @@ staging_songs_copy = ("""
     COMPUPDATE OFF REGION  '{region}'
     FORMAT  JSON 'auto'
     TRUNCATECOLUMNS BLANKSASNULL EMPTYASNULL;
-""").format(s3_bucket=SONG_DATA, arn=ROLE_ARN, region=REGION)
+""").format(
+        s3_bucket=SONG_DATA,
+        arn=ROLE_ARN,
+        region=REGION
+        )
 
 # FINAL TABLES
 
@@ -170,8 +178,8 @@ INSERT INTO songplay (start_time, user_id, level, song_id, artist_id, session_id
 """)
 
 user_table_insert = ("""
-INSERT INTO users (user_id, first_name, last_name, gender, level)
-    (SELECT DISTINCT
+INSERT INTO users (user_id, first_name, last_name, gender, level)(
+    SELECT DISTINCT
     userId ,
     firstName ,
     lastName ,
@@ -183,8 +191,8 @@ INSERT INTO users (user_id, first_name, last_name, gender, level)
 """)
 
 song_table_insert = ("""
-INSERT INTO songs (song_id, title, artist_id, year, duration)
-    (SELECT DISTINCT
+INSERT INTO songs (song_id, title, artist_id, year, duration)(
+    SELECT DISTINCT
     song_id,
     title,
     artist_id,
@@ -195,8 +203,8 @@ INSERT INTO songs (song_id, title, artist_id, year, duration)
 """)
 
 artist_table_insert = ("""
-INSERT INTO artists (artist_id, name, location, latitude, longitude)
-    (SELECT DISTINCT
+INSERT INTO artists (artist_id, name, location, latitude, longitude)(
+    SELECT DISTINCT
     artist_id,
     artist_name,
     artist_location,
@@ -207,8 +215,8 @@ INSERT INTO artists (artist_id, name, location, latitude, longitude)
 """)
 
 time_table_insert = ("""
-INSERT INTO time (start_time, hour, day, week, month, year, weekday)
-    (SELECT DISTINCT
+INSERT INTO time (start_time, hour, day, week, month, year, weekday)(
+    SELECT DISTINCT
     ts,
     EXTRACT(hour FROM ts),
     EXTRACT(day FROM ts),
